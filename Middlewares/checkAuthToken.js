@@ -9,7 +9,6 @@ function checkAuth(req, res, next) {
     if (!authToken || !refreshToken) {
         return res.status(401).json({ message: 'Authentication failed: No authToken or refreshToken provided' , ok : false });
     }
-
     jwt.verify(authToken, process.env.JWT_SECRET_KEY, (err, decoded) => {
         if (err) {
             // Auth token has expired, check the refresh token

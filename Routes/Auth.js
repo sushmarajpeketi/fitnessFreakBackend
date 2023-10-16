@@ -14,7 +14,7 @@ const transporter = nodemailer.createTransport(
         service:'gmail',
         auth:{
             user:'sushmaraj808@gmail.com',
-            pass: 'zvnj okvs tzga tzuc'
+            pass: 'zvnjokvstzgatzuc'
         }
     }
 )
@@ -33,15 +33,16 @@ function createResponse(ok, message, data){
     }
 }
 
-router.use(errorHandler)
+// router.use(errorHandler)
 
 router.post('/register',async(req,res,next)=>{
+    console.log("yes")
              try{
                 const { name, email, password, weightInKg, heightInCm, gender, dob, goal, activityLevel } = req.body;
                 const existingUser = await User.findOne({ email: email });
         
                 if (existingUser) {
-                    return res.status(409).json(createResponse(false, 'Email already exists'));
+                    return res.status(400).json(createResponse(false, 'Email already exists'));
                 }
         
                 const newUser = new User({
@@ -77,31 +78,37 @@ router.post('/register',async(req,res,next)=>{
        
 
 })
-router.post('/login',async(req,res,next)=>{
-    try{
+
+router.post('/login', async (req, res, next) => {
+    try {
+        console.log('hi i am inside try block of auth login')
         const { email, password } = req.body;
+        console.log('email,password',email,password)
         const user = await User.findOne({ email });
+        console.log(user)
         if (!user) {
-            return res.status(400).json(createResponse(false, 'Invalid credentials'));
+            return res.status(400).json(createResponse(false, 'No user'));
         }
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(400).json(createResponse(false, 'Invalid credentials'));
-    }
-    // jwt.sign(payload,key,option)
-    const authToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET_KEY, { expiresIn: '50m' });
-    const refreshToken = jwt.sign({ userId: user._id }, process.env.JWT_REFRESH_SECRET_KEY, { expiresIn: '100m' });
+            return res.status(400).json(createResponse(false, 'Invalid password or email credentials'));
+        }
 
-    // cookie(name,value,options(object literal)
-    res.cookie('authToken',authToken,{httpOnly:true})
-    res.cookie('refreshToken',refreshToken,{httpOnly:true})
-}
-    catch(err) {
-        next(err)
+        const authToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET_KEY, { expiresIn: '50m' });
+        const refreshToken = jwt.sign({ userId: user._id }, process.env.JWT_REFRESH_SECRET_KEY, { expiresIn: '100m' });
+       
+        res.cookie('authToken', authToken, { httpOnly: true });
+        res.cookie('refreshToken', refreshToken, { httpOnly: true });
+        res.status(200).json(createResponse(true, 'Login successful', {
+            authToken,
+            refreshToken
+        }));
     }
-
-    
+    catch (err) {
+        next(err);
+    }
 })
+
 router.post('/sendotp',async(req,res,next)=>{
     try{
         const {email} = req.body
@@ -127,12 +134,14 @@ router.post('/sendotp',async(req,res,next)=>{
             next(err)
         }
 })
+
 router.post('/checklogin',authTokenHandler,async(req,res,next)=>{
     res.json({
         ok:true,
         message:"user was authenticated succesfully"
     })
 })
+
 router.use(errorHandler)
 
 
